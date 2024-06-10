@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Image Classifier</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background-image: url("https://images.pexels.com/photos/7135057/pexels-photo-7135057.jpeg?cs=srgb&dl=pexels-codioful-7135057.jpg&fm=jpg");
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            color: white;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 90%; /* Adjust the width as needed */
+            margin-left: auto; /* Automatically adjust left margin */
+            margin-right: auto; /* Automatically adjust right margin */
+        }
+
+        .title {
+            text-align: left;
+            flex: 1;
+            margin-left: 50px; /* Adjust this value to shift left or right */
+        }
+
+        .title h1 {
+            margin: 0;
+            font-size: 3em; /* Adjust this value to make the title bigger */
+            font-family: 'Nunito', sans-serif;
+            position: relative; /* Required for absolute positioning */
+        }
+
+        .large-title {
+            font-family: 'Nunito', sans-serif;
+            font-size: 1.5em; /* Adjust the size of "Artificial Eye" */
+            animation: glow 2s infinite alternate; /* Glow animation */
+        }
+
+        .description {
+            margin-top: 10px;
+            font-size: 1.2em;
+            height: 50px;
+            overflow: hidden; /* to hide the extra text during typing animation */
+            white-space: nowrap;
+            border-right: 3px solid white; /* cursor effect */
+            animation: typing 5s steps(40, end) infinite, blink-caret 0.75s step-end infinite;
+        }
+
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        @keyframes blink-caret {
+            from, to { border-color: transparent; }
+            50% { border-color: white; }
+        }
+
+        @keyframes glow {
+            0% { text-shadow: 0 0 10px #0ABAB5; }
+            50% { text-shadow: 0 0 20px #0ABAB5; }
+            100% { text-shadow: 0 0 10px #0ABAB5; }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .upload-section {
+            flex: 1;
+            text-align: right;
+            margin-right:0px; /* Adjust this value to shift left or right */
+        }
+
+        form {
+            margin: 0;
+        }
+
+        #result, #confidence {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 1.2em;
+        }
+
+        input[type="file"] {
+            padding: 10px;
+            margin-top: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-bottom: 10px;
+            background-image: linear-gradient(to right, #0ABAB5, #FF1493);
+            border: 5px solid transparent;
+            border: 2px solid #004d40;
+            border-image-slice: 1;
+            border-radius: 5px;
+            filter: brightness(1.2) contrast(0.8);
+        }
+
+        button:hover {
+            transform: scale(1.1);
+        }
+
+        #image-container {
+            width: 224px;
+            height: 224px;
+            border: 2px dashed white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            margin: 20px auto;
+            position: relative;
+        }
+
+        #image-container img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 12px;
+        }
+
+        .placeholder {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 24px;
+            pointer-events: none;
+        }
+
+        .upload-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">
+            <h1><span class="large-title">RealityCheckAI:</span> Unveiling Reality's Layers</h1>
+            <div class="description" id="description">Upload an image to classify as AI Generated or Real.</div>
+        </div>
+        <div class="upload-section">
+            <form id="upload-form" enctype="multipart/form-data">
+                <div class="upload-container">
+                    <button type="submit">Upload and Classify</button>
+                    <div id="image-container">
+                        <img id="preview" src="https://cdn-icons-png.flaticon.com/512/1160/1160358.png" alt="Upload an image" class="placeholder">
+                    </div>
+                    <input type="file" name="file" id="file" required>
+                </div>
+            </form>
+            <div id="result"></div>
+            <div id="confidence"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('file').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('preview').src = e.target.result;
+                    document.getElementById('preview').classList.remove('placeholder');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('upload-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const formData = new FormData();
+            formData.append('file', document.getElementById('file').files[0]);
+
+            const response = await fetch('/predict', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            document.getElementById('result').innerText = `Result: ${result.result}`;
+            document.getElementById('confidence').innerText = `Confidence: ${(result.confidence * 100).toFixed(2)}%`;
+        });
+    </script>
+</body>
+</html>
