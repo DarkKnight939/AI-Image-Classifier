@@ -61,9 +61,9 @@ tbb==2021.12.0
 tenacity==8.3.0
 toml==0.10.2
 toolz==0.12.1
-torch==2.3.1+cpu
-torchaudio==2.3.1+cpu
-torchvision==0.18.1+cpu
+torch==2.3.1
+torchaudio==2.3.1
+torchvision==0.18.1
 tornado==6.4.1
 tqdm==4.66.4
 trio==0.25.1
