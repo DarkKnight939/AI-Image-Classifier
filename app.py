@@ -1,8 +1,10 @@
-from flask import Flask, request, jsonify, render_template
-from PIL import Image
+import os
 import torch
 import torchvision.transforms as transforms
 import logging
+import requests
+from flask import Flask, request, jsonify, render_template
+from PIL import Image
 from model import EfficientNet  # Adjust the import according to your file structure
 
 app = Flask(__name__)
@@ -10,10 +12,29 @@ app = Flask(__name__)
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
+# Define the URL where the model can be downloaded from
+MODEL_URL = "https://github.com/DarkKnight939/AI-Image-Classifier/releases/download/models/model.2.pth"
+
+# Define the path where the model will be saved locally
+MODEL_PATH = "model (2).pth"
+
+# Function to download the model
+def download_model(url, dest_path):
+    if not os.path.exists(dest_path):
+        logging.info(f"Downloading model from {url}")
+        response = requests.get(url)
+        response.raise_for_status()  # Check if the request was successful
+        with open(dest_path, 'wb') as f:
+            f.write(response.content)
+        logging.info("Model downloaded successfully")
+
+# Ensure the model is downloaded
+download_model(MODEL_URL, MODEL_PATH)
+
 # Load the model
 model_version = 'b0'  # Change this according to your model version
 model = EfficientNet(version=model_version)
-model.load_state_dict(torch.load("model (2).pth", map_location=torch.device('cpu')))
+model.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device('cpu')))
 model.eval()
 
 # Define the image transformations
@@ -55,6 +76,5 @@ def predict():
     return jsonify({'result': result, 'confidence': confidence})
 
 if __name__ == '__main__':
-    import os
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
